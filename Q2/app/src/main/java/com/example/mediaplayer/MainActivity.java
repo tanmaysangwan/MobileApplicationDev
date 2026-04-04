@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.MediaController;
 import android.widget.Toast;
@@ -21,9 +22,13 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
+
     private Uri selectedAudioUri;
     private MediaPlayer mediaPlayer;
     private boolean audioPrepared;
+
+    private VideoView videoView;
 
     private final ActivityResultLauncher<Intent> pickAudioLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -59,12 +64,26 @@ public class MainActivity extends AppCompatActivity {
             pickAudioLauncher.launch(intent);
         });
 
-        VideoView videoView = findViewById(R.id.videoView);
+        videoView = findViewById(R.id.videoView);
         EditText editTextUrl = findViewById(R.id.editTextUrl);
 
         MediaController videoMediaController = new MediaController(this);
         videoMediaController.setAnchorView(videoView);
         videoView.setMediaController(videoMediaController);
+
+        videoView.setOnPreparedListener(mp -> {
+            Log.i(TAG, "Video prepared");
+            Toast.makeText(this, "Video prepared", Toast.LENGTH_SHORT).show();
+            pauseAudioIfPlaying();
+            videoView.start();
+        });
+
+        videoView.setOnErrorListener((mp, what, extra) -> {
+            String message = "Video error what=" + what + " extra=" + extra;
+            Log.e(TAG, message);
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            return true;
+        });
 
         findViewById(R.id.buttonOpenVideo).setOnClickListener(v -> {
             String url = editTextUrl.getText().toString().trim();
@@ -72,7 +91,14 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Enter video URL", Toast.LENGTH_SHORT).show();
                 return;
             }
+            if (!url.matches("(?i)^https?://.*")) {
+                url = "https://" + url;
+            }
             Uri videoUri = Uri.parse(url);
+            Log.i(TAG, "Video URL: " + url);
+            Toast.makeText(this, "URL: " + url, Toast.LENGTH_SHORT).show();
+
+            videoView.stopPlayback();
             videoView.setVideoURI(videoUri);
             videoView.requestFocus();
         });
@@ -82,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Please select an audio file first", Toast.LENGTH_SHORT).show();
                 return;
             }
+            pauseVideoIfPlaying();
             if (!audioPrepared) {
                 prepareAudioFromUri();
                 if (!audioPrepared) {
@@ -116,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "Please select an audio file first", Toast.LENGTH_SHORT).show();
                 return;
             }
+            pauseVideoIfPlaying();
             if (!audioPrepared) {
                 prepareAudioFromUri();
                 if (!audioPrepared) {
@@ -126,6 +154,18 @@ public class MainActivity extends AppCompatActivity {
             }
             mediaPlayer.start();
         });
+    }
+
+    private void pauseAudioIfPlaying() {
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+            mediaPlayer.pause();
+        }
+    }
+
+    private void pauseVideoIfPlaying() {
+        if (videoView != null && videoView.isPlaying()) {
+            videoView.pause();
+        }
     }
 
     private void prepareAudioFromUri() {
@@ -140,12 +180,16 @@ public class MainActivity extends AppCompatActivity {
             audioPrepared = true;
         } catch (IOException e) {
             audioPrepared = false;
+            Log.e(TAG, "Audio prepare failed", e);
             Toast.makeText(this, "Could not load audio", Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     protected void onDestroy() {
+        if (videoView != null) {
+            videoView.stopPlayback();
+        }
         if (mediaPlayer != null) {
             mediaPlayer.release();
             mediaPlayer = null;
