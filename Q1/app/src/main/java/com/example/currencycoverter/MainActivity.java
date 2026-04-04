@@ -18,8 +18,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.google.android.material.appbar.MaterialToolbar;
-
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
@@ -45,15 +43,8 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        MaterialToolbar toolbar = findViewById(R.id.topToolbar);
-        setSupportActionBar(toolbar);
-        toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_settings) {
-                openSettings.launch(new Intent(this, SettingsActivity.class));
-                return true;
-            }
-            return false;
-        });
+        findViewById(R.id.buttonSettings).setOnClickListener(v ->
+                openSettings.launch(new Intent(this, SettingsActivity.class)));
 
         View mainContent = findViewById(R.id.main);
         mainContent.setAlpha(0f);
