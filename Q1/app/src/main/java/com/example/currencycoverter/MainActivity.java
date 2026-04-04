@@ -1,6 +1,9 @@
 package com.example.currencycoverter;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -8,10 +11,14 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+
+import com.google.android.material.appbar.MaterialToolbar;
 
 import java.util.Locale;
 
@@ -21,16 +28,42 @@ public class MainActivity extends AppCompatActivity {
     private static final double INR_PER_EUR = 106.0;
     private static final double INR_PER_JPY = 0.58;
 
+    private final ActivityResultLauncher<Intent> openSettings = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> recreate());
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SettingsActivity.applySavedNightMode(this);
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        MaterialToolbar toolbar = findViewById(R.id.topToolbar);
+        setSupportActionBar(toolbar);
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_settings) {
+                openSettings.launch(new Intent(this, SettingsActivity.class));
+                return true;
+            }
+            return false;
+        });
+
+        View mainContent = findViewById(R.id.main);
+        mainContent.setAlpha(0f);
+        mainContent.setTranslationY(24f);
+        mainContent.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(380)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
 
         String[] currencies = {"INR", "USD", "JPY", "EUR"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
