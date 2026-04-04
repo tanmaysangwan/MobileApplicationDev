@@ -41,38 +41,95 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal">
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/buttonSeekBack"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:minHeight="44dp"
+                android:paddingHorizontal="4dp"
+                android:text="−10s"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/buttonPlay"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:minHeight="44dp"
+                android:paddingHorizontal="4dp"
+                android:text="Play"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/buttonPause"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:minHeight="44dp"
+                android:paddingHorizontal="4dp"
+                android:text="Pause"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/buttonStop"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:minHeight="44dp"
+                android:paddingHorizontal="4dp"
+                android:text="Stop"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/buttonRestart"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:minHeight="44dp"
+                android:paddingHorizontal="4dp"
+                android:text="Restart"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/buttonSeekForward"
+                style="?android:attr/buttonBarButtonStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:minHeight="44dp"
+                android:paddingHorizontal="4dp"
+                android:text="+10s"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
+        </LinearLayout>
 
         <Button
-            android:id="@+id/buttonPlay"
-            android:layout_width="0dp"
+            android:id="@+id/buttonClear"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:text="Play" />
-
-        <Button
-            android:id="@+id/buttonPause"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:text="Pause" />
-
-        <Button
-            android:id="@+id/buttonStop"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:text="Stop" />
-
-        <Button
-            android:id="@+id/buttonRestart"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Restart" />
+            android:layout_marginTop="8dp"
+            android:minHeight="44dp"
+            android:text="Clear media" />
     </LinearLayout>
 </LinearLayout>

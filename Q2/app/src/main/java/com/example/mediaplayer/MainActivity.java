@@ -5,8 +5,8 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.EditText;
-import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
 
@@ -24,11 +24,29 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
+    private static final int SEEK_SKIP_MS = 10_000;
+
+    private static final int VIDEO_PENDING_NONE = 0;
+    private static final int VIDEO_PENDING_PLAY = 1;
+    private static final int VIDEO_PENDING_RESTART = 2;
+
+    private enum MediaKind {
+        NONE,
+        AUDIO,
+        VIDEO
+    }
+
+    private MediaKind activeMedia = MediaKind.NONE;
+
     private Uri selectedAudioUri;
     private MediaPlayer mediaPlayer;
     private boolean audioPrepared;
 
     private VideoView videoView;
+    private Uri currentVideoUri;
+    private boolean videoPrepared;
+    private boolean videoNeedsReload;
+    private int videoPendingAction = VIDEO_PENDING_NONE;
 
     private final ActivityResultLauncher<Intent> pickAudioLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -37,11 +55,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 Uri uri = result.getData().getData();
                 if (uri != null) {
+                    activeMedia = MediaKind.AUDIO;
                     selectedAudioUri = uri;
                     if (mediaPlayer != null) {
                         mediaPlayer.reset();
                     }
                     audioPrepared = false;
+                    clearVideoState();
                     Toast.makeText(this, "Audio file selected", Toast.LENGTH_SHORT).show();
                 }
             });
@@ -67,21 +87,28 @@ public class MainActivity extends AppCompatActivity {
         videoView = findViewById(R.id.videoView);
         EditText editTextUrl = findViewById(R.id.editTextUrl);
 
-        MediaController videoMediaController = new MediaController(this);
-        videoMediaController.setAnchorView(videoView);
-        videoView.setMediaController(videoMediaController);
-
         videoView.setOnPreparedListener(mp -> {
             Log.i(TAG, "Video prepared");
-            Toast.makeText(this, "Video prepared", Toast.LENGTH_SHORT).show();
-            pauseAudioIfPlaying();
-            videoView.start();
+            videoPrepared = true;
+            if (videoPendingAction == VIDEO_PENDING_PLAY) {
+                videoPendingAction = VIDEO_PENDING_NONE;
+                pauseAudioIfPlaying();
+                videoView.start();
+            } else if (videoPendingAction == VIDEO_PENDING_RESTART) {
+                videoPendingAction = VIDEO_PENDING_NONE;
+                pauseAudioIfPlaying();
+                videoView.seekTo(0);
+                videoView.start();
+            }
         });
 
         videoView.setOnErrorListener((mp, what, extra) -> {
             String message = "Video error what=" + what + " extra=" + extra;
             Log.e(TAG, message);
             Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            videoPrepared = false;
+            videoNeedsReload = true;
+            videoPendingAction = VIDEO_PENDING_NONE;
             return true;
         });
 
@@ -98,14 +125,117 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "Video URL: " + url);
             Toast.makeText(this, "URL: " + url, Toast.LENGTH_SHORT).show();
 
+            activeMedia = MediaKind.VIDEO;
+            pauseAudioIfPlaying();
+            currentVideoUri = videoUri;
+            videoNeedsReload = false;
+            videoPendingAction = VIDEO_PENDING_NONE;
+            videoPrepared = false;
+
+            videoView.setVisibility(View.VISIBLE);
             videoView.stopPlayback();
             videoView.setVideoURI(videoUri);
             videoView.requestFocus();
         });
 
-        findViewById(R.id.buttonPlay).setOnClickListener(v -> {
+        findViewById(R.id.buttonPlay).setOnClickListener(v -> handlePlay());
+        findViewById(R.id.buttonPause).setOnClickListener(v -> handlePause());
+        findViewById(R.id.buttonStop).setOnClickListener(v -> handleStop());
+        findViewById(R.id.buttonRestart).setOnClickListener(v -> handleRestart());
+        findViewById(R.id.buttonSeekBack).setOnClickListener(v -> handleSeekRelative(-SEEK_SKIP_MS));
+        findViewById(R.id.buttonSeekForward).setOnClickListener(v -> handleSeekRelative(SEEK_SKIP_MS));
+        findViewById(R.id.buttonClear).setOnClickListener(v -> handleClear());
+    }
+
+    private void clearVideoState() {
+        if (videoView != null) {
+            videoView.stopPlayback();
+        }
+        currentVideoUri = null;
+        videoPrepared = false;
+        videoNeedsReload = false;
+        videoPendingAction = VIDEO_PENDING_NONE;
+    }
+
+    private void handleClear() {
+        activeMedia = MediaKind.NONE;
+        selectedAudioUri = null;
+        currentVideoUri = null;
+        audioPrepared = false;
+        videoPrepared = false;
+        videoNeedsReload = false;
+        videoPendingAction = VIDEO_PENDING_NONE;
+
+        if (mediaPlayer != null) {
+            try {
+                mediaPlayer.reset();
+            } catch (IllegalStateException ignored) {
+            }
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+
+        if (videoView != null) {
+            videoView.stopPlayback();
+            videoView.setVisibility(View.INVISIBLE);
+        }
+    }
+
+    private void handleSeekRelative(int deltaMs) {
+        if (activeMedia == MediaKind.NONE) {
+            toastSelectMedia();
+            return;
+        }
+        if (activeMedia == MediaKind.AUDIO) {
+            seekAudio(deltaMs);
+            return;
+        }
+        seekVideo(deltaMs);
+    }
+
+    private void seekAudio(int deltaMs) {
+        if (!audioPrepared || mediaPlayer == null) {
+            Toast.makeText(this, "Media not ready to seek", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            int current = mediaPlayer.getCurrentPosition();
+            int duration = mediaPlayer.getDuration();
+            int target = current + deltaMs;
+            target = Math.max(0, target);
+            if (duration > 0) {
+                target = Math.min(target, duration);
+            }
+            mediaPlayer.seekTo(target);
+        } catch (IllegalStateException e) {
+            Log.w(TAG, "Audio seek failed", e);
+            Toast.makeText(this, "Cannot seek audio now", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void seekVideo(int deltaMs) {
+        if (currentVideoUri == null || !videoPrepared || videoView == null) {
+            Toast.makeText(this, "Media not ready to seek", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        int current = videoView.getCurrentPosition();
+        int duration = videoView.getDuration();
+        int target = current + deltaMs;
+        target = Math.max(0, target);
+        if (duration > 0) {
+            target = Math.min(target, duration);
+        }
+        videoView.seekTo(target);
+    }
+
+    private void handlePlay() {
+        if (activeMedia == MediaKind.NONE) {
+            toastSelectMedia();
+            return;
+        }
+        if (activeMedia == MediaKind.AUDIO) {
             if (selectedAudioUri == null) {
-                Toast.makeText(this, "Please select an audio file first", Toast.LENGTH_SHORT).show();
+                toastSelectMedia();
                 return;
             }
             pauseVideoIfPlaying();
@@ -116,15 +246,51 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             mediaPlayer.start();
-        });
+            return;
+        }
+        if (currentVideoUri == null) {
+            toastSelectMedia();
+            return;
+        }
+        pauseAudioIfPlaying();
+        if (videoNeedsReload) {
+            videoView.setVideoURI(currentVideoUri);
+            videoView.requestFocus();
+            videoNeedsReload = false;
+            videoPrepared = false;
+            videoPendingAction = VIDEO_PENDING_PLAY;
+            return;
+        }
+        if (!videoPrepared) {
+            videoPendingAction = VIDEO_PENDING_PLAY;
+            return;
+        }
+        pauseAudioIfPlaying();
+        videoView.start();
+    }
 
-        findViewById(R.id.buttonPause).setOnClickListener(v -> {
+    private void handlePause() {
+        if (activeMedia == MediaKind.NONE) {
+            toastSelectMedia();
+            return;
+        }
+        if (activeMedia == MediaKind.AUDIO) {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                 mediaPlayer.pause();
             }
-        });
+            return;
+        }
+        if (videoView != null && videoView.isPlaying()) {
+            videoView.pause();
+        }
+    }
 
-        findViewById(R.id.buttonStop).setOnClickListener(v -> {
+    private void handleStop() {
+        if (activeMedia == MediaKind.NONE) {
+            toastSelectMedia();
+            return;
+        }
+        if (activeMedia == MediaKind.AUDIO) {
             if (mediaPlayer == null) {
                 return;
             }
@@ -136,11 +302,22 @@ public class MainActivity extends AppCompatActivity {
             }
             mediaPlayer.reset();
             audioPrepared = false;
-        });
+            return;
+        }
+        videoPendingAction = VIDEO_PENDING_NONE;
+        videoView.stopPlayback();
+        videoPrepared = false;
+        videoNeedsReload = true;
+    }
 
-        findViewById(R.id.buttonRestart).setOnClickListener(v -> {
+    private void handleRestart() {
+        if (activeMedia == MediaKind.NONE) {
+            toastSelectMedia();
+            return;
+        }
+        if (activeMedia == MediaKind.AUDIO) {
             if (selectedAudioUri == null) {
-                Toast.makeText(this, "Please select an audio file first", Toast.LENGTH_SHORT).show();
+                toastSelectMedia();
                 return;
             }
             pauseVideoIfPlaying();
@@ -153,7 +330,27 @@ public class MainActivity extends AppCompatActivity {
                 mediaPlayer.seekTo(0);
             }
             mediaPlayer.start();
-        });
+            return;
+        }
+        if (currentVideoUri == null) {
+            toastSelectMedia();
+            return;
+        }
+        pauseAudioIfPlaying();
+        if (videoNeedsReload || !videoPrepared) {
+            videoView.setVideoURI(currentVideoUri);
+            videoView.requestFocus();
+            videoNeedsReload = false;
+            videoPrepared = false;
+            videoPendingAction = VIDEO_PENDING_RESTART;
+            return;
+        }
+        videoView.seekTo(0);
+        videoView.start();
+    }
+
+    private void toastSelectMedia() {
+        Toast.makeText(this, "Select audio or video first", Toast.LENGTH_SHORT).show();
     }
 
     private void pauseAudioIfPlaying() {
