@@ -4,7 +4,10 @@ import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.widget.EditText;
+import android.widget.MediaController;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
@@ -54,6 +57,24 @@ public class MainActivity extends AppCompatActivity {
             intent.setType("audio/*");
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             pickAudioLauncher.launch(intent);
+        });
+
+        VideoView videoView = findViewById(R.id.videoView);
+        EditText editTextUrl = findViewById(R.id.editTextUrl);
+
+        MediaController videoMediaController = new MediaController(this);
+        videoMediaController.setAnchorView(videoView);
+        videoView.setMediaController(videoMediaController);
+
+        findViewById(R.id.buttonOpenVideo).setOnClickListener(v -> {
+            String url = editTextUrl.getText().toString().trim();
+            if (url.isEmpty()) {
+                Toast.makeText(this, "Enter video URL", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            Uri videoUri = Uri.parse(url);
+            videoView.setVideoURI(videoUri);
+            videoView.requestFocus();
         });
 
         findViewById(R.id.buttonPlay).setOnClickListener(v -> {
