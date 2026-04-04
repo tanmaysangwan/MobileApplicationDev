@@ -1,6 +1,8 @@
 package com.example.currencycoverter;
 
 import android.os.Bundle;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,5 +22,17 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        String[] currencies = {"INR", "USD", "JPY", "EUR"};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_spinner_item,
+                currencies);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        Spinner spinnerFrom = findViewById(R.id.spinnerFromCurrency);
+        Spinner spinnerTo = findViewById(R.id.spinnerToCurrency);
+        spinnerFrom.setAdapter(adapter);
+        spinnerTo.setAdapter(adapter);
     }
 }
