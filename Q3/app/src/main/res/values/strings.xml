@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Sensors</string>
+    <string name="dashboard_title">Sensor Dashboard</string>
+    <string name="dashboard_subtitle">Live readings from your device</string>
+    <string name="sensor_accelerometer">Accelerometer</string>
+    <string name="sensor_light">Light Sensor</string>
+    <string name="sensor_proximity">Proximity Sensor</string>
+    <string name="splash_app_title">Sensor Dashboard</string>
+    <string name="splash_tagline">Monitor motion, light &amp; proximity</string>
+    <string name="splash_logo_description">App logo</string>
 </resources>
