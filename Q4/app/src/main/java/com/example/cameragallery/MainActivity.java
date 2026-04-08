@@ -7,7 +7,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -16,11 +18,16 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.documentfile.provider.DocumentFile;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
@@ -30,6 +37,10 @@ public class MainActivity extends AppCompatActivity {
     private Uri currentPhotoUri;
     private String currentPhotoPath;
     private Uri selectedFolderUri;
+    private final List<Uri> imageUris = new ArrayList<>();
+    private ImageGridAdapter imageGridAdapter;
+    private RecyclerView recyclerViewImages;
+    private TextView textEmpty;
 
     private final ActivityResultLauncher<Intent> cameraLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -50,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
                         getContentResolver().takePersistableUriPermission(treeUri, takeFlags);
                         selectedFolderUri = treeUri;
                         Toast.makeText(this, "Folder selected", Toast.LENGTH_SHORT).show();
+                        loadImagesFromSelectedFolder();
                     }
                 }
             });
@@ -61,6 +73,13 @@ public class MainActivity extends AppCompatActivity {
 
         Button buttonCamera = findViewById(R.id.buttonCamera);
         Button buttonFolder = findViewById(R.id.buttonFolder);
+        recyclerViewImages = findViewById(R.id.recyclerViewImages);
+        textEmpty = findViewById(R.id.textEmpty);
+
+        recyclerViewImages.setLayoutManager(new GridLayoutManager(this, 3));
+        imageGridAdapter = new ImageGridAdapter(imageUris);
+        recyclerViewImages.setAdapter(imageGridAdapter);
+        updateEmptyState();
 
         buttonCamera.setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -72,6 +91,60 @@ public class MainActivity extends AppCompatActivity {
         });
 
         buttonFolder.setOnClickListener(v -> launchFolderPicker());
+    }
+
+    private void loadImagesFromSelectedFolder() {
+        imageUris.clear();
+        if (selectedFolderUri == null) {
+            updateEmptyState();
+            imageGridAdapter.notifyDataSetChanged();
+            return;
+        }
+
+        DocumentFile selectedFolder = DocumentFile.fromTreeUri(this, selectedFolderUri);
+        if (selectedFolder == null || !selectedFolder.isDirectory()) {
+            updateEmptyState();
+            imageGridAdapter.notifyDataSetChanged();
+            return;
+        }
+
+        for (DocumentFile file : selectedFolder.listFiles()) {
+            if (file.isFile() && isImageFile(file)) {
+                Uri uri = file.getUri();
+                if (uri != null) {
+                    imageUris.add(uri);
+                }
+            }
+        }
+
+        imageGridAdapter.notifyDataSetChanged();
+        updateEmptyState();
+    }
+
+    private boolean isImageFile(DocumentFile file) {
+        String type = file.getType();
+        if (type != null && type.startsWith("image/")) {
+            return true;
+        }
+
+        String name = file.getName();
+        if (name == null) {
+            return false;
+        }
+
+        String lowerName = name.toLowerCase(Locale.US);
+        return lowerName.endsWith(".jpg")
+                || lowerName.endsWith(".jpeg")
+                || lowerName.endsWith(".png")
+                || lowerName.endsWith(".webp");
+    }
+
+    private void updateEmptyState() {
+        if (imageUris.isEmpty()) {
+            textEmpty.setVisibility(View.VISIBLE);
+        } else {
+            textEmpty.setVisibility(View.GONE);
+        }
     }
 
     private void launchFolderPicker() {
