@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Uri currentPhotoUri;
     private String currentPhotoPath;
+    private Uri selectedFolderUri;
 
     private final ActivityResultLauncher<Intent> cameraLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -40,12 +41,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+    private final ActivityResultLauncher<Intent> folderPickerLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Uri treeUri = result.getData().getData();
+                    if (treeUri != null) {
+                        int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+                        getContentResolver().takePersistableUriPermission(treeUri, takeFlags);
+                        selectedFolderUri = treeUri;
+                        Toast.makeText(this, "Folder selected", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         Button buttonCamera = findViewById(R.id.buttonCamera);
+        Button buttonFolder = findViewById(R.id.buttonFolder);
+
         buttonCamera.setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                     == PackageManager.PERMISSION_GRANTED) {
@@ -54,6 +70,18 @@ public class MainActivity extends AppCompatActivity {
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
             }
         });
+
+        buttonFolder.setOnClickListener(v -> launchFolderPicker());
+    }
+
+    private void launchFolderPicker() {
+        Intent folderIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        folderIntent.addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+        );
+        folderPickerLauncher.launch(folderIntent);
     }
 
     private void launchCamera() {
