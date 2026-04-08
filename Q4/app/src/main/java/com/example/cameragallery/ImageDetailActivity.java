@@ -15,6 +15,7 @@ import java.util.Locale;
 
 public class ImageDetailActivity extends AppCompatActivity {
 
+    private Uri imageUri;
     private String imageName = "Unknown";
     private String imagePath = "Unknown";
     private String imageSize = "Unknown";
@@ -27,9 +28,7 @@ public class ImageDetailActivity extends AppCompatActivity {
 
         ImageView imagePreview = findViewById(R.id.imagePreview);
         findViewById(R.id.buttonDetails).setOnClickListener(v -> showDetailsDialog());
-        findViewById(R.id.buttonDelete).setOnClickListener(
-                v -> Toast.makeText(this, "Delete feature coming soon", Toast.LENGTH_SHORT).show()
-        );
+        findViewById(R.id.buttonDelete).setOnClickListener(v -> showDeleteConfirmation());
 
         String uriString = getIntent().getStringExtra(MainActivity.EXTRA_IMAGE_URI);
         if (uriString == null || uriString.isEmpty()) {
@@ -38,7 +37,7 @@ public class ImageDetailActivity extends AppCompatActivity {
             return;
         }
 
-        Uri imageUri = Uri.parse(uriString);
+        imageUri = Uri.parse(uriString);
         imagePreview.setImageURI(imageUri);
         imagePath = imageUri.toString();
 
@@ -82,5 +81,42 @@ public class ImageDetailActivity extends AppCompatActivity {
             return "Unknown";
         }
         return DateFormat.getDateTimeInstance().format(new Date(lastModified));
+    }
+
+    private void showDeleteConfirmation() {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Image")
+                .setMessage("Are you sure you want to delete this image?")
+                .setPositiveButton("YES", (dialog, which) -> deleteImage())
+                .setNegativeButton("NO", null)
+                .show();
+    }
+
+    private void deleteImage() {
+        if (imageUri == null) {
+            Toast.makeText(this, "Deletion failed", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        boolean deleted = false;
+        DocumentFile imageFile = DocumentFile.fromSingleUri(this, imageUri);
+        if (imageFile != null) {
+            deleted = imageFile.delete();
+        }
+
+        if (!deleted) {
+            try {
+                deleted = getContentResolver().delete(imageUri, null, null) > 0;
+            } catch (Exception ignored) {
+                deleted = false;
+            }
+        }
+
+        if (deleted) {
+            Toast.makeText(this, "Image deleted", Toast.LENGTH_SHORT).show();
+            finish();
+        } else {
+            Toast.makeText(this, "Failed to delete image", Toast.LENGTH_SHORT).show();
+        }
     }
 }

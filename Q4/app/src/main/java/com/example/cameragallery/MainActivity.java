@@ -89,6 +89,14 @@ public class MainActivity extends AppCompatActivity {
         buttonFolder.setOnClickListener(v -> launchFolderPicker());
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (selectedFolderUri != null) {
+            loadImagesFromSelectedFolder();
+        }
+    }
+
     private void openImageDetail(Uri imageUri) {
         Intent intent = new Intent(this, ImageDetailActivity.class);
         intent.putExtra(EXTRA_IMAGE_URI, imageUri.toString());
