@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
@@ -17,13 +16,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -35,7 +31,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
 
     private Uri currentPhotoUri;
-    private String currentPhotoPath;
     private Uri selectedFolderUri;
     private final List<Uri> imageUris = new ArrayList<>();
     private ImageGridAdapter imageGridAdapter;
@@ -45,8 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private final ActivityResultLauncher<Intent> cameraLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && currentPhotoUri != null) {
-                    // Photo is saved to currentPhotoPath/currentPhotoUri for later usage.
                     Toast.makeText(this, "Photo saved successfully", Toast.LENGTH_SHORT).show();
+                    loadImagesFromSelectedFolder();
                 } else {
                     Toast.makeText(this, "Photo capture canceled", Toast.LENGTH_SHORT).show();
                 }
@@ -158,41 +153,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void launchCamera() {
+        if (selectedFolderUri == null) {
+            Toast.makeText(this, "Please select folder first", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (cameraIntent.resolveActivity(getPackageManager()) == null) {
             Toast.makeText(this, "No camera app available", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        File imageFile;
-        try {
-            imageFile = createImageFile();
-        } catch (IOException e) {
+        DocumentFile selectedFolder = DocumentFile.fromTreeUri(this, selectedFolderUri);
+        if (selectedFolder == null || !selectedFolder.isDirectory()) {
+            Toast.makeText(this, "Selected folder is unavailable", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+        String fileName = "IMG_" + timestamp + ".jpg";
+        DocumentFile imageFile = selectedFolder.createFile("image/jpeg", fileName);
+        if (imageFile == null || imageFile.getUri() == null) {
             Toast.makeText(this, "Failed to create image file", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        currentPhotoUri = FileProvider.getUriForFile(
-                this,
-                getPackageName() + ".fileprovider",
-                imageFile
-        );
+        currentPhotoUri = imageFile.getUri();
 
         cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, currentPhotoUri);
         cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
         cameraLauncher.launch(cameraIntent);
-    }
-
-    private File createImageFile() throws IOException {
-        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
-        String imageFileName = "IMG_" + timestamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        if (storageDir == null) {
-            throw new IOException("External files directory unavailable");
-        }
-        File image = File.createTempFile(imageFileName, ".jpg", storageDir);
-        currentPhotoPath = image.getAbsolutePath();
-        return image;
     }
 
     @Override
