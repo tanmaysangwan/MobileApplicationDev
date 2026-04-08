@@ -3,9 +3,9 @@ package com.example.cameragallery;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.documentfile.provider.DocumentFile;
 
@@ -15,16 +15,21 @@ import java.util.Locale;
 
 public class ImageDetailActivity extends AppCompatActivity {
 
+    private String imageName = "Unknown";
+    private String imagePath = "Unknown";
+    private String imageSize = "Unknown";
+    private String imageDate = "Unknown";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_detail);
 
         ImageView imagePreview = findViewById(R.id.imagePreview);
-        TextView textName = findViewById(R.id.textName);
-        TextView textPath = findViewById(R.id.textPath);
-        TextView textSize = findViewById(R.id.textSize);
-        TextView textDate = findViewById(R.id.textDate);
+        findViewById(R.id.buttonDetails).setOnClickListener(v -> showDetailsDialog());
+        findViewById(R.id.buttonDelete).setOnClickListener(
+                v -> Toast.makeText(this, "Delete feature coming soon", Toast.LENGTH_SHORT).show()
+        );
 
         String uriString = getIntent().getStringExtra(MainActivity.EXTRA_IMAGE_URI);
         if (uriString == null || uriString.isEmpty()) {
@@ -35,21 +40,29 @@ public class ImageDetailActivity extends AppCompatActivity {
 
         Uri imageUri = Uri.parse(uriString);
         imagePreview.setImageURI(imageUri);
+        imagePath = imageUri.toString();
 
         DocumentFile imageFile = DocumentFile.fromSingleUri(this, imageUri);
         if (imageFile == null) {
-            textName.setText("Name: Unknown");
-            textPath.setText("Path: " + imageUri);
-            textSize.setText("Size: Unknown");
-            textDate.setText("Date: Unknown");
             return;
         }
 
-        String name = imageFile.getName() != null ? imageFile.getName() : "Unknown";
-        textName.setText("Name: " + name);
-        textPath.setText("Path: " + imageUri);
-        textSize.setText("Size: " + formatSize(imageFile.length()));
-        textDate.setText("Date: " + formatDate(imageFile.lastModified()));
+        imageName = imageFile.getName() != null ? imageFile.getName() : "Unknown";
+        imageSize = formatSize(imageFile.length());
+        imageDate = formatDate(imageFile.lastModified());
+    }
+
+    private void showDetailsDialog() {
+        String message = "Name: " + imageName
+                + "\n\nPath: " + imagePath
+                + "\n\nSize: " + imageSize
+                + "\n\nDate: " + imageDate;
+
+        new AlertDialog.Builder(this)
+                .setTitle("Image Details")
+                .setMessage(message)
+                .setPositiveButton("Close", null)
+                .show();
     }
 
     private String formatSize(long bytes) {
