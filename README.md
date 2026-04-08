@@ -130,7 +130,7 @@ git clone https://github.com/tanmaysangwan/MobileApplicationDev.git
 
 ## Screenshots
 
-TBDL
+[View screenshots in the Photos folder](./Photos)
 
 ---
 
