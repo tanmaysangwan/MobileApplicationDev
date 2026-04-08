@@ -13,10 +13,16 @@ import java.util.List;
 
 public class ImageGridAdapter extends RecyclerView.Adapter<ImageGridAdapter.ImageViewHolder> {
 
-    private final List<Uri> imageUris;
+    public interface OnImageClickListener {
+        void onImageClick(Uri imageUri);
+    }
 
-    public ImageGridAdapter(List<Uri> imageUris) {
+    private final List<Uri> imageUris;
+    private final OnImageClickListener onImageClickListener;
+
+    public ImageGridAdapter(List<Uri> imageUris, OnImageClickListener onImageClickListener) {
         this.imageUris = imageUris;
+        this.onImageClickListener = onImageClickListener;
     }
 
     @NonNull
@@ -28,7 +34,9 @@ public class ImageGridAdapter extends RecyclerView.Adapter<ImageGridAdapter.Imag
 
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
-        holder.imageView.setImageURI(imageUris.get(position));
+        Uri imageUri = imageUris.get(position);
+        holder.imageView.setImageURI(imageUri);
+        holder.itemView.setOnClickListener(v -> onImageClickListener.onImageClick(imageUri));
     }
 
     @Override

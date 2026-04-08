@@ -29,6 +29,7 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
+    public static final String EXTRA_IMAGE_URI = "extra_image_uri";
 
     private Uri currentPhotoUri;
     private Uri selectedFolderUri;
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         textEmpty = findViewById(R.id.textEmpty);
 
         recyclerViewImages.setLayoutManager(new GridLayoutManager(this, 3));
-        imageGridAdapter = new ImageGridAdapter(imageUris);
+        imageGridAdapter = new ImageGridAdapter(imageUris, this::openImageDetail);
         recyclerViewImages.setAdapter(imageGridAdapter);
         updateEmptyState();
 
@@ -86,6 +87,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         buttonFolder.setOnClickListener(v -> launchFolderPicker());
+    }
+
+    private void openImageDetail(Uri imageUri) {
+        Intent intent = new Intent(this, ImageDetailActivity.class);
+        intent.putExtra(EXTRA_IMAGE_URI, imageUri.toString());
+        startActivity(intent);
     }
 
     private void loadImagesFromSelectedFolder() {
