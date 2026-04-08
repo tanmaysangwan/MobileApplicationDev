@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -29,6 +30,7 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
+    private static final String TAG = "MainActivity";
     public static final String EXTRA_IMAGE_URI = "extra_image_uri";
 
     private Uri currentPhotoUri;
@@ -118,35 +120,44 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        int totalFiles = 0;
+        int loadedImages = 0;
+        int skippedInvalid = 0;
         for (DocumentFile file : selectedFolder.listFiles()) {
-            if (file.isFile() && isImageFile(file)) {
-                Uri uri = file.getUri();
-                if (uri != null) {
-                    imageUris.add(uri);
-                }
+            totalFiles++;
+            if (file == null || !file.exists() || !file.isFile()) {
+                skippedInvalid++;
+                continue;
             }
+
+            String name = file.getName();
+            if (name == null || file.length() == 0L || !isImageFile(name)) {
+                skippedInvalid++;
+                continue;
+            }
+
+            Uri uri = file.getUri();
+            if (uri == null) {
+                skippedInvalid++;
+                continue;
+            }
+
+            imageUris.add(uri);
+            loadedImages++;
         }
 
         imageGridAdapter.notifyDataSetChanged();
         updateEmptyState();
+        Log.d(TAG, "Image load complete. Total files: " + totalFiles
+                + ", loaded: " + loadedImages
+                + ", skipped: " + skippedInvalid);
     }
 
-    private boolean isImageFile(DocumentFile file) {
-        String type = file.getType();
-        if (type != null && type.startsWith("image/")) {
-            return true;
-        }
-
-        String name = file.getName();
-        if (name == null) {
-            return false;
-        }
-
+    private boolean isImageFile(String name) {
         String lowerName = name.toLowerCase(Locale.US);
         return lowerName.endsWith(".jpg")
                 || lowerName.endsWith(".jpeg")
-                || lowerName.endsWith(".png")
-                || lowerName.endsWith(".webp");
+                || lowerName.endsWith(".png");
     }
 
     private void updateEmptyState() {

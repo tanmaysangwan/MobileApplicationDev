@@ -34,7 +34,19 @@ public class ImageGridAdapter extends RecyclerView.Adapter<ImageGridAdapter.Imag
 
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
+        if (position < 0 || position >= imageUris.size()) {
+            holder.imageView.setImageDrawable(null);
+            holder.itemView.setOnClickListener(null);
+            return;
+        }
+
         Uri imageUri = imageUris.get(position);
+        if (imageUri == null) {
+            holder.imageView.setImageDrawable(null);
+            holder.itemView.setOnClickListener(null);
+            return;
+        }
+
         holder.imageView.setImageURI(imageUri);
         holder.itemView.setOnClickListener(v -> onImageClickListener.onImageClick(imageUri));
     }
