@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /** How many INR one unit of {@code currency} is worth (INR is base). */
+
     private static double inrPerOneUnit(String currency) {
         switch (currency) {
             case "INR":
